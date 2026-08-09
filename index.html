@@ -736,7 +736,7 @@ let focusGlobe = ()=>{};
 (function initGlobe(){
   if(typeof THREE==='undefined'){
     document.getElementById('globeFallback').style.display='flex';
-    addUserMarker=()=>{}; focusGlobe=()=>{};
+    addUserMarker=()=>{}; focusGlobe=(la,lo,cb)=>{if(typeof cb==='function')setTimeout(cb,0)};
     return;
   }
   const wrap=document.getElementById('globeWrap');
@@ -748,7 +748,7 @@ let focusGlobe = ()=>{};
   catch(e){
     /* WebGL недоступен: показываем фолбэк, но страница (гео, карусели) работает дальше */
     document.getElementById('globeFallback').style.display='flex';
-    addUserMarker=()=>{}; focusGlobe=()=>{};
+    addUserMarker=()=>{}; focusGlobe=(la,lo,cb)=>{if(typeof cb==='function')setTimeout(cb,0)};
     return;
   }
   renderer.setPixelRatio(Math.min(devicePixelRatio,2));
@@ -868,17 +868,19 @@ let focusGlobe = ()=>{};
   const ZMIN=1.65,ZMAX=5.6;
   function setZoom(z){zoomT=Math.max(ZMIN,Math.min(ZMAX,z));camera.position.z=zoomT;}
   const SENS=matchMedia('(pointer: coarse)').matches?.0085:.005;
-  let rotX=.28,rotY=2.2,auto=true,lastInteract=0,anim=null;
+  let rotX=.28,rotY=2.2,auto=true,lastInteract=0,anim=null,focusCb=null;
   const ray=new THREE.Raycaster(),mouse=new THREE.Vector2();
-  focusGlobe=(lat,lng)=>{
+  focusGlobe=(lat,lng,onDone)=>{
     const th=(lng+180)*Math.PI/180;
     let toY=Math.PI/2-th;
     const toX=Math.max(-.9,Math.min(.9,lat*Math.PI/180));
     while(toY-rotY>Math.PI)toY-=2*Math.PI;
     while(toY-rotY<-Math.PI)toY+=2*Math.PI;
     anim={t0:performance.now(),dur:1600,fx:rotX,fy:rotY,tx:toX,ty:toY};
+    focusCb=typeof onDone==='function'?onDone:null; /* позовём, когда шар докрутит и встанет */
     auto=false;lastInteract=performance.now()+6000;
   };
+  function fireFocus(){const cb=focusCb;focusCb=null;if(cb)cb();}
 
   function size(){
     const w=wrap.clientWidth,h=wrap.clientHeight;
@@ -898,7 +900,7 @@ let focusGlobe = ()=>{};
     }else{
       dragging=true;moved=0;px=e.clientX;py=e.clientY;
     }
-    auto=false;lastInteract=performance.now();anim=null;
+    auto=false;lastInteract=performance.now();anim=null;fireFocus(); /* юзер схватил шар — не ждём дальше */
     try{wrap.setPointerCapture(e.pointerId)}catch(err){}
   });
   wrap.addEventListener('pointermove',e=>{
@@ -973,7 +975,7 @@ let focusGlobe = ()=>{};
       const k=Math.min(1,(performance.now()-anim.t0)/anim.dur);
       const e=1-Math.pow(1-k,3);
       rotX=anim.fx+(anim.tx-anim.fx)*e;rotY=anim.fy+(anim.ty-anim.fy)*e;
-      if(k>=1)anim=null;
+      if(k>=1){anim=null;fireFocus();} /* докрутили — можно скроллить к карусели */
     }
     if(auto)rotY+=.00055;
     camera.position.z+=(zoomT-camera.position.z)*.14; /* плавный зум */
@@ -1180,7 +1182,6 @@ let focusGlobe = ()=>{};
   function onGeo(la,lo){
     try{localStorage.setItem('geoChoice','yes')}catch(e){}
     if(typeof addUserMarker==='function')addUserMarker(la,lo);
-    if(typeof focusGlobe==='function')focusGlobe(la,lo);
     const near=EVENTS.filter(e=>e.lat!=null)
       .map(e=>({e,d:haversine(la,lo,e.lat,e.lng)}))
       .sort((x,y)=>x.d-y.d);
@@ -1188,12 +1189,17 @@ let focusGlobe = ()=>{};
     txt.innerHTML='Вы на карте ✦';
     yes.style.display='none';no.style.display='none';manual.classList.remove('show');
     note.textContent='';
-    /* без всплывашки про дальние события — сразу скроллим к «Вокруг вас», там виден поиск */
-    setTimeout(()=>{
-      ask.classList.remove('show');
+    setTimeout(()=>ask.classList.remove('show'),900);
+    /* скролл к «Вокруг вас» — только после того, как глобус докрутил до точки юзера и остановился */
+    let scrolled=false;
+    const scrollToAround=()=>{
+      if(scrolled)return; scrolled=true;
       const secA=document.getElementById('around');
       if(secA)secA.scrollIntoView({behavior:'smooth',block:'start'});
-    },900);
+    };
+    setTimeout(scrollToAround,2600); /* страховка, если колбэк не дозвался */
+    if(typeof focusGlobe==='function')focusGlobe(la,lo,scrollToAround);
+    else scrollToAround();
   }
   function onGeoError(err){
     note.textContent=({
