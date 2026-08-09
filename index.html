@@ -868,6 +868,53 @@ let focusGlobe = ()=>{};
   const SENS=matchMedia('(pointer: coarse)').matches?.0085:.005;
   let rotX=.28,rotY=2.2,auto=true,lastInteract=0,anim=null,focusCb=null;
   const ray=new THREE.Raycaster(),mouse=new THREE.Vector2();
+
+  /* --- луна: спрятана за землёй, её орбита связана с вращением шара --- */
+  const MOON_D=1.8, MOON_R=.32, moonRotY0=rotY; /* видимый размер — 20% от земли в стартовых пропорциях */
+  const moonGroup=new THREE.Group();scene.add(moonGroup);
+  function moonTexture(){
+    const c=document.createElement('canvas');c.width=c.height=256;
+    const g=c.getContext('2d');
+    const gr=g.createRadialGradient(96,88,20,128,128,150); /* запечённый свет — без источников света в сцене */
+    gr.addColorStop(0,'#c9c9d4');gr.addColorStop(.55,'#8f8f9c');gr.addColorStop(1,'#3a3a44');
+    g.fillStyle=gr;g.beginPath();g.arc(128,128,126,0,7);g.fill();
+    for(let i=0;i<26;i++){ /* кратеры */
+      const a=Math.random()*7,d=Math.random()*96,x=128+Math.cos(a)*d,y=128+Math.sin(a)*d,r=3+Math.random()*11;
+      g.fillStyle='rgba(40,40,52,'+(.12+Math.random()*.2)+')';
+      g.beginPath();g.arc(x,y,r,0,7);g.fill();
+    }
+    return new THREE.CanvasTexture(c);
+  }
+  const moonMesh=new THREE.Mesh(new THREE.SphereGeometry(MOON_R,48,48),
+    new THREE.MeshBasicMaterial({map:moonTexture(),transparent:true}));
+  moonMesh.userData={moon:true};
+  moonGroup.add(moonMesh);
+  const moonGlow=new THREE.Sprite(new THREE.SpriteMaterial({
+    map:dotTexture('#b9b9cc'),blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.45}));
+  moonGlow.scale.set(1.2,1.2,1); /* мягкий ореол вокруг диска */
+  moonGroup.add(moonGlow);
+  /* огоньки онлайн-событий живут на луне — на обращённой к нам полусфере */
+  ONLINE.forEach((ev,i)=>{
+    const s=new THREE.Sprite(new THREE.SpriteMaterial({
+      map:dotTexture(COLORS[ev.color]||'#7c8cf0'),blending:THREE.AdditiveBlending,depthWrite:false}));
+    const phi=((i+.5)/ONLINE.length)*1.35, th=i*2.399963; /* золотой угол — равномерно по полусфере */
+    const r=MOON_R*1.06;
+    s.position.set(r*Math.sin(phi)*Math.cos(th),r*Math.sin(phi)*Math.sin(th),r*Math.cos(phi));
+    s.scale.set(.055,.055,1);
+    s.userData={id:ev.id,base:.055};
+    moonGroup.add(s);markers.push(s); /* общий пул: пульс, ховер-подсказка и клик — как у земных огоньков */
+  });
+  function updateMoon(){
+    const cz=camera.position.z, ma=rotY-moonRotY0; /* угол орбиты = поворот шара от старта */
+    const mz=-Math.cos(ma)*MOON_D, mx=-Math.sin(ma)*MOON_D;
+    moonGroup.position.set(mx,.28,mz); /* чуть выше плоскости — наклон орбиты */
+    const dist=Math.max(.5,cz-mz);
+    const sc=Math.max(.5,Math.min(2.2,.2*dist/(cz*MOON_R))); /* видимый размер всегда ~20% от земли */
+    moonGroup.scale.set(sc,sc,sc);
+    const o=Math.max(0,Math.min(1,(dist-.55)/.35)); /* гасим, когда пролетает мимо камеры на глубоком зуме */
+    moonMesh.material.opacity=o;moonGlow.material.opacity=.45*o;
+  }
+
   focusGlobe=(lat,lng,onDone)=>{
     const th=(lng+180)*Math.PI/180;
     let toY=Math.PI/2-th;
@@ -923,10 +970,11 @@ let focusGlobe = ()=>{};
     /* hover tooltip */
     if(e.target.closest&&e.target.closest('#geoAsk')){tip.classList.remove('show');return;}
     ray.setFromCamera(mouse,camera);
-    const hit=ray.intersectObjects(markers)[0];
+    const hit=ray.intersectObjects(markers.concat(moonMesh))[0];
     if(hit){
-      const ev=EVENTS.find(x=>x.id===hit.object.userData.id);
-      tip.textContent=ev?`${ev.title} — ${ev.city}`:'Вы здесь';
+      const isMoon=!!hit.object.userData.moon;
+      const ev=isMoon?null:EVENTS.find(x=>x.id===hit.object.userData.id);
+      tip.textContent=isMoon?'Луна · онлайн-события':(ev?`${ev.title} — ${ev.city}`:'Вы здесь');
       tip.style.left=(e.clientX-r.left)+'px';
       tip.style.top=(e.clientY-r.top)+'px';
       tip.classList.add('show');
@@ -947,8 +995,13 @@ let focusGlobe = ()=>{};
       mouse.x=((e.clientX-r.left)/r.width)*2-1;
       mouse.y=-((e.clientY-r.top)/r.height)*2+1;
       ray.setFromCamera(mouse,camera);
-      const hit=ray.intersectObjects(markers)[0];
-      if(hit)openEvent(hit.object.userData.id);
+      const hit=ray.intersectObjects(markers.concat(moonMesh))[0];
+      if(hit){
+        if(hit.object.userData.moon){ /* клик по луне — к карусели онлайн-событий */
+          const o=document.getElementById('online');
+          if(o)o.scrollIntoView({behavior:'smooth',block:'start'});
+        }else openEvent(hit.object.userData.id);
+      }
     }
   });
   wrap.addEventListener('pointercancel',e=>{
@@ -979,6 +1032,7 @@ let focusGlobe = ()=>{};
     if(auto)rotY+=.00055;
     camera.position.z+=(zoomT-camera.position.z)*.14; /* плавный зум */
     world.rotation.y=rotY;world.rotation.x=rotX;
+    updateMoon();
     if(userRing){
       const ph=(t*1.1)%1,rs=.22+.16*ph;
       userRing.scale.set(rs,rs,1);
