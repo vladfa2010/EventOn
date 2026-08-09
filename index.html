@@ -223,21 +223,16 @@
   }
   /* карточка-заглушка «ИИ ищет…» */
   .card.ai-loading{
-    display:flex;flex-direction:column;align-items:flex-start;justify-content:center;
-    gap:14px;padding:24px;cursor:default;background:#151518;
+    cursor:default;background:#151518;
     border:1px solid #8b80f966;
     flex-basis:clamp(150px,17vw,235px); /* ровно вдвое уже обычной карточки */
   }
   .card.ai-loading:hover{transform:none}
-  .ai-pulse{
-    font-family:'Oswald',sans-serif;font-weight:700;font-size:15px;letter-spacing:.14em;
-    padding:8px 14px;border-radius:999px;color:#fff;
-    background:linear-gradient(120deg,#8b80f9,#7c8cf0);
-    animation:aiPulse 1.6s ease-in-out infinite;
-  }
+  .card.ai-loading .card-ai{animation:aiPulse 1.6s ease-in-out infinite} /* пульс у значка ИИ */
+  /* компоновка идентична обычной карточке: тег + заголовок Oswald + мелкая строка */
+  .card.ai-loading .card-title{font-size:clamp(18px,1.7vw,24px);max-width:100%;line-height:1.08}
+  .card.ai-loading .card-added{color:#ffffff80}
   @keyframes aiPulse{0%,100%{opacity:1;box-shadow:0 0 0 0 #8b80f988}50%{opacity:.75;box-shadow:0 0 0 12px #8b80f900}}
-  .ai-loading-text{font-weight:600;font-size:15px;line-height:1.35;color:#ffffffd9}
-  .ai-loading-text span{display:block;margin-top:4px;font-size:12.5px;color:var(--dim);font-weight:500}
   /* карточка сбора почты в «Вокруг вас» */
   .card.sub-card{
     display:flex;flex-direction:column;align-items:flex-start;justify-content:center;
@@ -1114,8 +1109,14 @@ let focusGlobe = ()=>{};
     /* заметная карточка-заглушка, пока ИИ ищет */
     const loader=document.createElement('article');
     loader.className='card violet ai-loading';
-    loader.innerHTML=`<div class="ai-pulse">ИИ</div>
-      <div class="ai-loading-text">Мы ищем культурные события вокруг вас<span>Изучаем для вас интернет — обычно до пары минут…</span></div>`;
+    loader.innerHTML=`<span class="card-ai">ИИ</span>
+      <div class="card-bottom">
+        <div>
+          <span class="card-tag">Поиск рядом</span>
+          <h3 class="card-title">Мы ищем культурные события вокруг вас</h3>
+          <span class="card-added">изучаем интернет · до пары минут…</span>
+        </div>
+      </div>`;
     wrapC.prepend(loader);
     /* карточка почты — второй, сразу за заглушкой «ИИ ищет» */
     const subCardEl=wrapC.querySelector('.sub-card'); if(subCardEl)loader.after(subCardEl);
