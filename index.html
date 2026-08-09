@@ -976,12 +976,18 @@ let focusGlobe = ()=>{};
     const sec=document.getElementById('around');
     const wrapC=document.getElementById('carouselAround');
     const cityName=nearestCityName(la,lo);
-    wrapC.innerHTML='';
-    near.slice(0,6).forEach(x=>{
-      const card=makeCard(x.e);
-      card.querySelector('.card-tag').textContent+=` · ${Math.round(x.d)} км`;
-      wrapC.appendChild(card);
-    });
+    /* база: только ≤500 км, ближайшие первыми (near уже отсортирован) */
+    const close=near.filter(x=>x.d<=500).slice(0,8);
+    const renderBase=()=>{
+      wrapC.innerHTML='';
+      const list=close.length?close:near.slice(0,3); /* если в 500 км пусто — хотя бы ближайшие */
+      list.forEach(x=>{
+        const card=makeCard(x.e);
+        card.querySelector('.card-tag').textContent+=` · ${Math.round(x.d)} км`;
+        wrapC.appendChild(card);
+      });
+    };
+    renderBase();
     const sub=document.getElementById('aroundSub');
     sub.textContent=`рядом: ${cityName} · из нашей базы · Kimi ищет свежее (до пары минут)…`;
     sec.style.display='';
@@ -1021,11 +1027,12 @@ let focusGlobe = ()=>{};
           EVENTS.push(ev);
           return ev;
         });
-        /* свежие — в начало карусели, со значком «ИИ» */
-        fresh.slice().reverse().forEach(ev=>{
+        /* ИИ закончил — блок полностью перерисовываем под найденное */
+        wrapC.innerHTML='';
+        fresh.forEach(ev=>{
           const card=makeCard(ev);
           card.insertAdjacentHTML('beforeend','<span class="card-ai">ИИ</span>');
-          wrapC.prepend(card);
+          wrapC.appendChild(card);
         });
         sub.textContent=`рядом: ${cityName} · ${fresh.length} свежих от Kimi${j.cached?' · кэш':''}`;
       })
