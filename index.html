@@ -509,12 +509,24 @@ const EVENTS = [
   {id:"libro-vasco", title:"Un libro al giorno · Vasco Brondi", tag:"Онлайн · Литература", chip:"Онлайн", city:"🌐 Онлайн", badge:"8 АВГ", date:"АВГ’26", lat:null, lng:null, color:"violet", desc:"Летняя книжная рубрика Exibart продолжается: Васко Бронди рекомендует книгу дня — чтение для медленного августа.", link:"https://www.exibart.com/libri-ed-editoria/un-libro-al-giorno-vasco-brondi/", source:"www.exibart.com"},
   {id:"grammatica-aste", title:"Грамматика аукционов", tag:"Онлайн · Арт-рынок", chip:"Онлайн", city:"🌐 Онлайн", badge:"8 АВГ", date:"АВГ’26", lat:null, lng:null, color:"blue", desc:"Как на самом деле устроены аукционные продажи искусства: гид Exibart по механике торгов — от стартовых цен до молотка.", link:"https://www.exibart.com/mercato/grammatica-delle-aste/", source:"www.exibart.com"},
   {id:"airless-tires", title:"Безвоздушные шины", tag:"Онлайн · Дизайн", chip:"Онлайн", city:"🌐 Онлайн", badge:"7 АВГ", date:"АВГ’26", lat:null, lng:null, color:"red", desc:"Их пока нельзя купить, зато можно напечатать: Yanko Design о 3D-печатных безвоздушных шинах — дизайн, который избавляет от проколов.", link:"https://www.yankodesign.com/2026/08/07/you-still-cant-buy-airless-tires-but-you-can-3d-print-them/", source:"yankodesign.com"},
+  {id:"awartani-venice", title:"Dana Awartani · Биеннале", tag:"Выставка · Биеннале", chip:"Выставка", city:"Венеция, Италия", badge:"8 АВГ", date:"АВГ’26", lat:45.4408, lng:12.3155, color:"violet", desc:"Дана Авартани привезла на Венецианскую биеннале хрупкую архитектуру памяти — павильон Саудовской Аравии как тонкое сооружение из следов утраченного наследия.", link:"https://artplugged.co.uk/dana-awartani-brings-a-fragile-architecture-of-memory-pavilion-saudi-arabia-venice-biennale/", source:"artplugged.co.uk"},
+  {id:"london-top5", title:"Топ-5 выставок Лондона", tag:"Выставки · Подборка", chip:"Выставка", city:"Лондон, Великобритания", badge:"7 АВГ", date:"АВГ’26", lat:51.5074, lng:-0.1278, color:"red", desc:"FAD собрал пять главных музейных выставок Лондона на этот август — готовый маршрут по лучшим залам города на остаток лета.", link:"https://fadmagazine.com/2026/08/07/top-5-museum-exhibitions-london-august/", source:"fadmagazine.com"},
+  {id:"hillings-abudhabi", title:"Guggenheim Abu Dhabi", tag:"Новости · Назначение", chip:"Другое", city:"Абу-Даби, ОАЭ", badge:"7 АВГ", date:"АВГ’26", lat:24.501, lng:54.383, color:"blue", desc:"Валери Хиллингс назначена первым директором Guggenheim Abu Dhabi — музей Франка Гери на острове Саадият получил руководителя накануне открытия.", link:"https://www.artasiapacific.com/news/valerie-hillings-appointed-inaugural-director-of-guggenheim-abu-dhabi/", source:"artasiapacific.com"},
+  {id:"sa-ladakh", title:"sā Ladakh · Гималаи", tag:"Биеннале", chip:"Фестиваль", city:"Лех, Ладакх, Индия", badge:"6 АВГ", date:"АВГ’26", lat:34.1526, lng:77.5771, color:"violet", desc:"sā Ladakh — самая высокогорная биеннале мира: современное искусство на высоте более 3500 метров, среди индийских Гималаев.", link:"https://www.exibart.com/arte-contemporanea/sa-ladakh-la-biennale-piu-alta-al-mondo-e-sullhimalaya-indiano/", source:"exibart.com"},
+  {id:"gugg-abudhabi-form", title:"Декодинг Guggenheim", tag:"Архитектура · Музеи", chip:"Архитектура", city:"Абу-Даби, ОАЭ", badge:"6 АВГ", date:"АВГ’26", lat:24.501, lng:54.383, color:"gray", desc:"Почему Guggenheim Abu Dhabi выглядит именно так: разбор архитектурной логики самого ожидаемого музея Ближнего Востока — конусы, кластеры и пустынный контекст Гери.", link:"https://sandytimes.ae/places/5262-decoding-guggenheim-abu-dhabi-why-does-it-look-like-that", source:"sandytimes.ae"},
+  {id:"berlin-type", title:"Berlin Museum · шрифты", tag:"Дизайн · Ребрендинг", chip:"Другое", city:"Берлин, Германия", badge:"6 АВГ", date:"АВГ’26", lat:52.52, lng:13.405, color:"blue", desc:"Новая айдентика Berlin Museum от Stan Hema заимствует шрифты у вагонов U-Bahn и ларьков с карривурстом — фирменный стиль, собранный из типографики самого города.", link:"https://www.itsnicethat.com/articles/stan-hema-berlin-museum-graphic-design-project-060826", source:"itsnicethat.com"},
+  {id:"cerilli-peggy", title:"Мария Рита Черилли", tag:"Некролог · Peggy Guggenheim", chip:"Другое", city:"Венеция, Италия", badge:"6 АВГ", date:"АВГ’26", lat:45.4308, lng:12.331, color:"gray", desc:"Ушла Мария Рита Черилли — многолетняя руководительница коммуникаций Коллекции Пегги Гуггенхайм в Венеции, голос одного из главных музеев города.", link:"https://www.exibart.com/personaggi/addio-a-maria-rita-cerilli-responsabile-della-comunicazione-della-collezione-peggy-guggenheim/", source:"exibart.com"},
+  {id:"krasner-pollock-met", title:"Краснер и Поллок · Мет", tag:"Выставка · Анонс", chip:"Выставка", city:"Нью-Йорк, США", badge:"6 АВГ", date:"СКОРО", lat:40.7794, lng:-73.9632, color:"red", desc:"Метрополитен-музей готовит большую выставку Ли Краснер и Джексона Поллока — главная пара американского абстрактного экспрессионизма в одном зале.", link:"https://fadmagazine.com/2026/08/06/lee-krasner-jackson-pollock-the-met/", source:"fadmagazine.com"},
+  {id:"gavin-turk-soane", title:"Gavin Turk · Soane's", tag:"Выставка · Анонс", chip:"Выставка", city:"Лондон, Великобритания", badge:"6 АВГ", date:"СКОРО", lat:51.517, lng:-0.1174, color:"violet", desc:"Большая выставка Гэвина Терка едет в музей сэра Джона Соуна — современный концептуалист встретится с эксцентричной коллекцией старого Лондона.", link:"https://fadmagazine.com/2026/08/06/gavin-turk-sir-john-soanes-museum/", source:"fadmagazine.com"},
+  {id:"frieze-loos", title:"Туалеты Frieze", tag:"Ярмарка · Арт", chip:"Фестиваль", city:"Лондон, Великобритания", badge:"6 АВГ", date:"СКОРО", lat:51.5355, lng:-0.1536, color:"blue", desc:"Художник переосмыслил туалеты Frieze London: самые утилитарные зоны ярмарки превращаются в арт-проект — подробности перед октябрьским открытием.", link:"https://hyperallergic.com/an-artist-reimagines-frieze-londons-loos/", source:"hyperallergic.com"},
+  {id:"frieze-wielebinski", title:"Gray Wielebinski · Frieze", tag:"Ярмарка · Программа", chip:"Фестиваль", city:"Лондон, Великобритания", badge:"6 АВГ", date:"СКОРО", lat:51.5355, lng:-0.1536, color:"red", desc:"Cakes, Rims & Dean's Bottom: Gray Wielebinski в программе Frieze London 2026 — ярмарка раскрыла первые имена и проекты октябрьского издания.", link:"https://fadmagazine.com/2026/08/06/frieze-london-2026-programme/", source:"fadmagazine.com"},
+  {id:"crip-exhibition", title:"Notes on a Crip Exhibition", tag:"Онлайн · Эссе", chip:"Онлайн", city:"🌐 Онлайн", badge:"6 АВГ", date:"АВГ’26", lat:null, lng:null, color:"gray", desc:"ArtReview: заметки Алисы Хаттрик о крип-выставке — как музеи и кураторы работают с темой инвалидности и доступности в искусстве.", link:"https://artreview.com/notes-on-a-crip-exhibition-alice-hattrick/", source:"artreview.com"},
 ];
 
 /* ================= CAROUSELS ================= */
 /* разбивка: идущие сейчас / скоро открываются */
-const NOW_IDS=['beyeler','vanherpen','mot-tokyo','ostrowski','met-odyssey','portatadino','venice-palazzo','mvrdv','stills-peace','beirut','spider-seoul'];
-const ONLINE_IDS=['tv-stream','flip-flop','easel-view','libro-vasco','grammatica-aste','airless-tires'];
+const NOW_IDS=['beyeler','vanherpen','mot-tokyo','ostrowski','met-odyssey','portatadino','venice-palazzo','mvrdv','stills-peace','beirut','spider-seoul','awartani-venice','london-top5','hillings-abudhabi','sa-ladakh','gugg-abudhabi-form','berlin-type','cerilli-peggy'];
+const ONLINE_IDS=['tv-stream','flip-flop','easel-view','libro-vasco','grammatica-aste','airless-tires','crip-exhibition'];
 const NOW=EVENTS.filter(e=>NOW_IDS.includes(e.id));
 const ONLINE=EVENTS.filter(e=>ONLINE_IDS.includes(e.id));
 const SOON=EVENTS.filter(e=>!NOW_IDS.includes(e.id)&&!ONLINE_IDS.includes(e.id));
@@ -924,7 +936,7 @@ let focusGlobe = ()=>{};
     'сан-франциско':'Сан-Франциско','чикаго':'Чикаго','мехико':'Мехико','сан-паулу':'Сан-Паулу','рио':'Рио',
     'буэнос-айрес':'Буэнос-Айрес','торонто':'Торонто','лиссабон':'Лиссабон','копенгаген':'Копенгаген',
     'стокгольм':'Стокгольм','хельсинк':'Хельсинки','нью-дели':'Нью-Дели','мумба':'Мумбаи','тбилис':'Тбилиси',
-    'ереван':'Ереван','киев':'Киев'};
+    'ереван':'Ереван','киев':'Киев','абу-даби':'Абу-Даби','лех':'Лех','ладакх':'Ладакх'};
   function nearestCityName(la,lo){
     let best=null,bd=1e9;
     for(const k in CITY_COORDS){
@@ -1093,7 +1105,9 @@ const CITY_COORDS={
  'мумба':[19.076,72.8777],'mumbai':[19.076,72.8777],
  'тбилис':[41.7151,44.8271],'tbilisi':[41.7151,44.8271],
  'ереван':[40.1792,44.4991],'yerevan':[40.1792,44.4991],
- 'киев':[50.4501,30.5234],'kyiv':[50.4501,30.5234]
+ 'киев':[50.4501,30.5234],'kyiv':[50.4501,30.5234],
+ 'абу-даби':[24.4539,54.3773],'abu dhabi':[24.4539,54.3773],
+ 'лех':[34.1526,77.5771],'leh':[34.1526,77.5771],'ладакх':[34.1526,77.5771],'ladakh':[34.1526,77.5771]
 };
 function geoFromCity(city){
   const c=city.toLowerCase();
