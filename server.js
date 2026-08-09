@@ -58,20 +58,6 @@ async function askKimi(city) {
   let lastErr = null;
   for (const model of MODELS) {
     try {
-      /* до 3 раундов: модель может попросить поиск несколько раз;
-         эхо tool_call: content = arguments ДОСЛОВНО (поиск исполняется на стороне Moonshot) */
-      let msg = null;
-      for (let round = 0; round < 3; round++) {
-        const j = await chat(Object.assign({ model, messages, tools }, REQ));
-        msg = j.choices && j.choices[0] && j.choices[0].message;
-        if (!msg) throw new Error('empty response');
-        const fr = j.choices[0].finish_reason;
-        if (fr !== 'tool_calls' || !(msg.tool_calls && msg.tool_calls.length)) break;
-        messages.push(msg);
-        for (const tc of msg.tool_calls) {
-          messages.push({ role: 'tool', tool_call_id: tc.id, name: tc.function.name, content: tc.function.arguments });
-        }
-      }
       /* извлекаем JSON устойчиво: модель может обернуть ответ рассуждениями/тегами —
          пробуем весь текст, затем все [...]-кандидаты от самых длинных */
       const parseArr = (text) => {
@@ -85,23 +71,34 @@ async function askKimi(city) {
         }
         return null;
       };
-      let arr = parseArr(msg && msg.content);
-      if (!arr) { /* модель ушла в рассуждения вместо JSON — настойчивый переспрос с правом ещё поискать */
-        messages.push(msg, { role: 'user', content: 'Ответ не распознан. При необходимости сделай ещё один поиск, затем верни СТРОГО JSON-массив событий без рассуждений, markdown и тегов. Если уверенных событий нет — верни [].' });
-        for (let r2 = 0; r2 < 2 && !arr; r2++) {
-          const j2 = await chat(Object.assign({ model, messages, tools }, REQ));
-          const msg2 = j2.choices && j2.choices[0] && j2.choices[0].message;
-          if (!msg2) break;
-          const fr2 = j2.choices[0].finish_reason;
-          if (fr2 === 'tool_calls' && msg2.tool_calls && msg2.tool_calls.length) {
-            messages.push(msg2);
-            for (const tc of msg2.tool_calls) {
-              messages.push({ role: 'tool', tool_call_id: tc.id, name: tc.function.name, content: tc.function.arguments });
-            }
-            continue;
+      /* один раунд диалога: либо эхо поиска (вернёт null), либо финальный текст → массив */
+      const runRound = async () => {
+        const j = await chat(Object.assign({ model, messages, tools }, REQ));
+        const m = j.choices && j.choices[0] && j.choices[0].message;
+        if (!m) throw new Error('empty response');
+        const fr = j.choices[0].finish_reason;
+        if (fr === 'tool_calls' && m.tool_calls && m.tool_calls.length) {
+          messages.push(m);
+          for (const tc of m.tool_calls) {
+            messages.push({ role: 'tool', tool_call_id: tc.id, name: tc.function.name, content: tc.function.arguments });
           }
-          arr = parseArr(msg2.content);
+          return null;
         }
+        messages.push(m);
+        return parseArr(m.content);
+      };
+      /* до 3 раундов поиска; temperature=1 → ответы вариативны,
+         поэтому при мусоре/пустоте — до 2 переспросов с правом искать снова */
+      let arr = null;
+      for (let round = 0; round < 3 && !arr; round++) arr = await runRound();
+      const NUDGES = [
+        'События точно есть. Сделай ещё 1–2 поиска другими словами (афиша, выставки, вернисаж, музеи, что посетить, kudamoscow, afisha, timeout) и верни СТРОГО JSON-массив без рассуждений.',
+        'Попробуй ещё раз: другие запросы и источники, можно по-английски. Только JSON-массив; если совсем ничего — [].'
+      ];
+      for (let retry = 0; retry < NUDGES.length && (!arr || !arr.length); retry++) {
+        messages.push({ role: 'user', content: NUDGES[retry] });
+        arr = null;
+        for (let round = 0; round < 2 && !arr; round++) arr = await runRound();
       }
       if (!arr) return [];
       const seen = new Set();
