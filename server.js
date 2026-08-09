@@ -153,8 +153,29 @@ http.createServer(async (req, res) => {
     return;
   }
 
+  /* сбор email для будущей рассылки (пока просто копим в subscribers.csv) */
+  if (u.pathname === '/api/subscribe' && req.method === 'POST') {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    let body = '';
+    req.on('data', c => { body += c; if (body.length > 4096) req.destroy(); });
+    req.on('end', () => {
+      let j = {}; try { j = JSON.parse(body || '{}'); } catch (e) {}
+      const email = String(j.email || '').trim().slice(0, 120);
+      const city = String(j.city || '').trim().slice(0, 60);
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+        res.statusCode = 400; res.end(JSON.stringify({ ok: false, error: 'bad email' })); return;
+      }
+      const line = `${new Date().toISOString()};${email};${city}\n`;
+      fs.appendFile(path.join(__dirname, 'subscribers.csv'), line, (err) => {
+        if (err) console.warn('[/api/subscribe]', String(err));
+      });
+      res.end(JSON.stringify({ ok: true }));
+    });
+    return;
+  }
+
   /* статика */
-  if (u.pathname === '/.env' || u.pathname.startsWith('/.')) { res.statusCode = 404; res.end('not found'); return; }
+  if (u.pathname === '/.env' || u.pathname === '/subscribers.csv' || u.pathname.startsWith('/.')) { res.statusCode = 404; res.end('not found'); return; }
   const rel = u.pathname === '/' ? 'index.html' : decodeURIComponent(u.pathname).replace(/^\/+/, '');
   const fp = path.join(__dirname, rel);
   if (!fp.startsWith(__dirname)) { res.statusCode = 403; res.end(); return; }
