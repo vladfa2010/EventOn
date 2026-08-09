@@ -146,9 +146,10 @@
   /* ---------- sections ---------- */
   section{padding:clamp(48px,8vh,90px) clamp(16px,4vw,56px) 0}
   .sec-head{
-    display:flex;align-items:baseline;justify-content:space-between;
-    margin-bottom:26px;gap:16px;
+    display:flex;align-items:baseline;justify-content:flex-start;flex-wrap:wrap;
+    margin-bottom:26px;gap:6px 18px; /* подпись — сразу после названия… */
   }
+  .sec-head .car-nav{margin-left:auto} /* …а стрелки — по-прежнему справа */
   .sec-title{font-size:clamp(24px,3vw,34px);font-weight:700;letter-spacing:-.01em}
   .sec-all{
     color:var(--dim);font-weight:700;font-size:14px;letter-spacing:.14em;text-transform:uppercase;
