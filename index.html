@@ -153,6 +153,19 @@
     text-decoration:none;transition:color .2s;
   }
   .sec-all:hover{color:#fff}
+  /* пилюля найденной локации в «Вокруг вас» — клик = сменить город */
+  .around-meta{display:inline-flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .around-meta:hover{color:var(--dim)} /* не белеем весь блок — белеет только пилюля */
+  .loc-pill{
+    display:inline-flex;align-items:center;gap:8px;padding:8px 15px;border-radius:999px;
+    background:#ffffff0d;border:1px solid #ffffff26;cursor:pointer;color:#fff;
+    font-family:'Inter',sans-serif;font-weight:700;font-size:14px;letter-spacing:.02em;
+    text-transform:none;transition:border-color .2s,box-shadow .2s,transform .2s;
+  }
+  .loc-pill:hover{border-color:#8b80f9;box-shadow:0 4px 18px #8b80f93d;transform:translateY(-1px)}
+  .loc-pin{width:15px;height:15px;flex:0 0 auto}
+  .loc-edit{font-size:11px;color:var(--dim);font-weight:600;opacity:0;transition:opacity .2s;text-transform:uppercase;letter-spacing:.08em}
+  .loc-pill:hover .loc-edit{opacity:1}
 
   /* ---------- carousel ---------- */
   .carousel{
@@ -418,7 +431,20 @@
 <section id="around" style="display:none">
   <div class="sec-head">
     <h2 class="sec-title">Вокруг вас</h2>
-    <span class="sec-all" id="aroundSub"></span>
+    <span class="sec-all around-meta">
+      <button class="loc-pill" id="locPill" title="Нажмите, чтобы изменить локацию">
+        <svg class="loc-pin" viewBox="0 0 24 24" fill="none">
+          <defs><linearGradient id="locPinGrad" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#ff2e2e"/><stop offset="1" stop-color="#8b80f9"/>
+          </linearGradient></defs>
+          <path d="M12 21.5s-7.2-6.3-7.2-11.3a7.2 7.2 0 1 1 14.4 0c0 5-7.2 11.3-7.2 11.3z" stroke="url(#locPinGrad)" stroke-width="2"/>
+          <circle cx="12" cy="10.2" r="2.5" fill="#ff2e2e"/>
+        </svg>
+        <span id="locName">—</span>
+        <span class="loc-edit">изменить</span>
+      </button>
+      <span id="aroundSub"></span>
+    </span>
     <div class="car-nav">
       <button class="car-btn" id="arPrev" aria-label="Назад">←</button>
       <button class="car-btn" id="arNext" aria-label="Вперёд">→</button>
@@ -1032,6 +1058,8 @@ let focusGlobe = ()=>{};
     inp.addEventListener('keydown',e=>{if(e.key==='Enter')send();});
     return el;
   }
+  /* пилюля локации: обновить имя города */
+  function setLoc(name){const el=document.getElementById('locName');if(el)el.textContent=name;}
   /* «Вокруг вас»: сразу — ближайшие события из нашей базы,
      затем догружаем свежие находки Kimi через сервер /api/around */
   function fillAround(la,lo,near){
@@ -1043,8 +1071,7 @@ let focusGlobe = ()=>{};
       .then(r=>r.json()).then(g=>{
         if(g&&g.ok&&g.city){
           cityName=g.city;
-          const s=document.getElementById('aroundSub');
-          s.textContent=s.textContent.replace(/^рядом: [^·]+/,`рядом: ${cityName}`);
+          setLoc(cityName); /* точное имя — в пилюлю */
         }
       }).catch(()=>{});
     /* база: только ≤500 км, ближайшие первыми (near уже отсортирован) */
@@ -1061,7 +1088,8 @@ let focusGlobe = ()=>{};
     };
     renderBase();
     const sub=document.getElementById('aroundSub');
-    sub.textContent=`рядом: ${cityName} · из нашей базы · Kimi ищет свежее (до пары минут)…`;
+    setLoc(cityName); /* мгновенная оценка — сразу в пилюлю */
+    sub.textContent='из нашей базы · Kimi ищет свежее (до пары минут)…';
     sec.style.display='';
     /* заметная карточка-заглушка, пока ИИ ищет */
     const loader=document.createElement('article');
@@ -1083,7 +1111,7 @@ let focusGlobe = ()=>{};
           if(!j) throw new Error('пустой ответ');
           if(j.ok&&j.pending){
             if(++polls<60)setTimeout(poll,10000); /* ждём до ~10 минут */
-            else{stopLoading();subCardBack();sub.textContent=`рядом: ${cityName} · Kimi думает дольше обычного — обнови страницу позже`;}
+            else{stopLoading();subCardBack();sub.textContent='Kimi думает дольше обычного — обнови страницу позже';}
             return;
           }
           if(!j.ok) throw new Error(j.error||'ошибка поиска');
@@ -1093,16 +1121,16 @@ let focusGlobe = ()=>{};
           stopLoading();
           subCardBack();
           const msg=String(err&&err.message||err||'').slice(0,70);
-          sub.textContent=`рядом: ${cityName} · из нашей базы · Kimi недоступен${msg?': '+msg:''}`;
+          sub.textContent=`из нашей базы · Kimi недоступен${msg?': '+msg:''}`;
         });
     };
     setTimeout(poll,400);
     const onAroundResult=(j)=>{
         stopLoading();
-        if(j.city)cityName=j.city; /* авторитетный город с сервера */
+        if(j.city){cityName=j.city;setLoc(cityName);} /* авторитетный город с сервера — в пилюлю */
         if(!j.events||!j.events.length){
           subCardBack();
-          sub.textContent=`рядом: ${cityName} · Kimi не нашёл свежего — показываем нашу базу`;return;
+          sub.textContent='Kimi не нашёл свежего — показываем нашу базу';return;
         }
         const KIND={exhibition:'Выставка',performance:'Перформанс',festival:'Фестиваль',other:'Событие'};
         const CHIP={exhibition:'Выставка',performance:'Сцена',festival:'Фестиваль',other:'Другое'};
@@ -1129,7 +1157,7 @@ let focusGlobe = ()=>{};
           wrapC.appendChild(card);
         });
         wrapC.appendChild(makeSubCard(cityName)); /* карточка почты остаётся и после refresh */
-        sub.textContent=`рядом: ${cityName} · ${fresh.length} свежих от Kimi${j.cached?' · кэш':''}`;
+        sub.textContent=`${fresh.length} свежих от Kimi${j.cached?' · кэш':''}`;
     };
   }
   const manual=document.getElementById('geoManual'),
@@ -1188,6 +1216,19 @@ let focusGlobe = ()=>{};
       .catch(fallback);
   };
   cityInp.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('geoCityGo').click();});
+  /* клик по пилюле с городом в «Вокруг вас» — открываем гео-карточку в режиме смены локации */
+  const locPill=document.getElementById('locPill');
+  if(locPill)locPill.onclick=()=>{
+    txt.innerHTML='Хотите смотреть<br>другую локацию?';
+    yes.style.display='';no.style.display=''; /* можно и заново разрешить гео */
+    note.textContent='';
+    manual.classList.add('show');
+    const cur=document.getElementById('locName').textContent;
+    if(cur&&cur!=='—'&&cur!=='вами')cityInp.value=cur; /* текущий город — подсказка в поле */
+    ask.classList.add('show');
+    window.scrollTo({top:0,behavior:'smooth'});
+    setTimeout(()=>{try{cityInp.focus();cityInp.select();}catch(e){}},450);
+  };
 })();
 
 /* ================= ADD EVENT FORM ================= */
