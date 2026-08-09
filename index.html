@@ -226,11 +226,14 @@
     cursor:default;background:#151518;
     border:1px solid #8b80f966;
     flex-basis:clamp(150px,17vw,235px); /* ровно вдвое уже обычной карточки */
+    display:flex;flex-direction:column;justify-content:flex-start;
+    padding:60px 24px 18px; /* текст стартует от линии под значком ИИ — вровень с соседней карточкой */
   }
   .card.ai-loading:hover{transform:none}
   .card.ai-loading .card-ai{animation:aiPulse 1.6s ease-in-out infinite} /* пульс у значка ИИ */
-  /* компоновка идентична обычной карточке: тег + заголовок Oswald + мелкая строка */
-  .card.ai-loading .card-title{font-size:clamp(18px,1.7vw,24px);max-width:100%;line-height:1.08}
+  .card.ai-loading .card-bottom{position:static;display:block}
+  /* компоновка обычной карточки: тег + заголовок Oswald + мелкая строка */
+  .card.ai-loading .card-title{font-size:clamp(16px,1.5vw,21px);max-width:100%;line-height:1.08}
   .card.ai-loading .card-added{color:#ffffff80}
   @keyframes aiPulse{0%,100%{opacity:1;box-shadow:0 0 0 0 #8b80f988}50%{opacity:.75;box-shadow:0 0 0 12px #8b80f900}}
   /* карточка сбора почты в «Вокруг вас» */
@@ -1114,12 +1117,29 @@ let focusGlobe = ()=>{};
         <div>
           <span class="card-tag">Поиск рядом</span>
           <h3 class="card-title">Мы ищем культурные события вокруг вас</h3>
-          <span class="card-added">изучаем интернет · до пары минут…</span>
+          <span class="card-added">изучаем интернет…</span>
         </div>
       </div>`;
     wrapC.prepend(loader);
     /* карточка почты — второй, сразу за заглушкой «ИИ ищет» */
     const subCardEl=wrapC.querySelector('.sub-card'); if(subCardEl)loader.after(subCardEl);
+    /* верх текстового блока заглушки — ровно по линии заголовка соседней карточки */
+    const alignLoader=()=>{
+      try{
+        if(!loader.isConnected){window.removeEventListener('resize',alignLoader);return;}
+        const sc=wrapC.querySelector('.sub-card'); if(!sc)return;
+        const anchor=sc.querySelector('.sub-title')||sc.querySelector('.sub-done')||sc.firstElementChild;
+        const tag=loader.querySelector('.card-tag'); if(!anchor||!tag)return;
+        const target=anchor.getBoundingClientRect().top-sc.getBoundingClientRect().top;
+        const cur=tag.getBoundingClientRect().top-loader.getBoundingClientRect().top;
+        const pad=parseFloat(getComputedStyle(loader).paddingTop)||0;
+        const next=Math.max(46,Math.min(200,pad+target-cur));
+        if(Math.abs(next-pad)>.5)loader.style.paddingTop=next+'px';
+      }catch(e){}
+    };
+    requestAnimationFrame(alignLoader);
+    if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>requestAnimationFrame(alignLoader));
+    window.addEventListener('resize',alignLoader);
     const subCardBack=()=>{if(subCardEl)wrapC.appendChild(subCardEl)}; /* вернуть в конец, если поиск не удался */
     const stopLoading=()=>{try{loader.remove()}catch(e){}};
     /* поиск на сервере идёт в фоне — опрашиваем каждые 10с, пока не будет готово */
