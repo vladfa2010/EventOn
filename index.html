@@ -973,9 +973,10 @@ let focusGlobe = ()=>{};
     if(!dragging&&performance.now()-lastInteract>2500)auto=true;
     if(anim){
       const k=Math.min(1,(performance.now()-anim.t0)/anim.dur);
-      const e=1-Math.pow(1-k,3);
+      /* easeInOutQuint: мягкий старт и мягкая посадка — «дорогое» движение */
+      const e=k<.5?16*k*k*k*k*k:1-Math.pow(-2*k+2,5)/2;
       rotX=anim.fx+(anim.tx-anim.fx)*e;rotY=anim.fy+(anim.ty-anim.fy)*e;
-      if(k>=1){anim=null;fireFocus();} /* докрутили — можно скроллить к карусели */
+      if(k>=1){anim=null;setTimeout(fireFocus,500);} /* докрутили — полсекунды паузы, затем скролл */
     }
     if(auto)rotY+=.00055;
     camera.position.z+=(zoomT-camera.position.z)*.14; /* плавный зум */
