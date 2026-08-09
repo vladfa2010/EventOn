@@ -1102,13 +1102,13 @@ let focusGlobe = ()=>{};
     renderBase();
     const sub=document.getElementById('aroundSub');
     setLoc(cityName); /* мгновенная оценка — сразу в пилюлю */
-    sub.textContent='из нашей базы · Kimi ищет свежее (до пары минут)…';
+    sub.textContent='из нашей базы · мы ищем для вас свежее (до пары минут)…';
     sec.style.display='';
     /* заметная карточка-заглушка, пока ИИ ищет */
     const loader=document.createElement('article');
     loader.className='card violet ai-loading';
     loader.innerHTML=`<div class="ai-pulse">ИИ</div>
-      <div class="ai-loading-text">Мы ищем культурные события вокруг вас<span>Kimi изучает интернет — обычно до пары минут…</span></div>`;
+      <div class="ai-loading-text">Мы ищем культурные события вокруг вас<span>Изучаем для вас интернет — обычно до пары минут…</span></div>`;
     wrapC.prepend(loader);
     /* карточка почты — второй, сразу за заглушкой «ИИ ищет» */
     const subCardEl=wrapC.querySelector('.sub-card'); if(subCardEl)loader.after(subCardEl);
@@ -1124,7 +1124,7 @@ let focusGlobe = ()=>{};
           if(!j) throw new Error('пустой ответ');
           if(j.ok&&j.pending){
             if(++polls<60)setTimeout(poll,10000); /* ждём до ~10 минут */
-            else{stopLoading();subCardBack();sub.textContent='Kimi думает дольше обычного — обнови страницу позже';}
+            else{stopLoading();subCardBack();sub.textContent='Мы ищем дольше обычного — обновите страницу позже';}
             return;
           }
           if(!j.ok) throw new Error(j.error||'ошибка поиска');
@@ -1134,7 +1134,7 @@ let focusGlobe = ()=>{};
           stopLoading();
           subCardBack();
           const msg=String(err&&err.message||err||'').slice(0,70);
-          sub.textContent=`из нашей базы · Kimi недоступен${msg?': '+msg:''}`;
+          sub.textContent=`из нашей базы · поиск временно недоступен${msg?': '+msg:''}`;
         });
     };
     setTimeout(poll,400);
@@ -1143,7 +1143,7 @@ let focusGlobe = ()=>{};
         if(j.city){cityName=j.city;setLoc(cityName);} /* авторитетный город с сервера — в пилюлю */
         if(!j.events||!j.events.length){
           subCardBack();
-          sub.textContent='Kimi не нашёл свежего — показываем нашу базу';return;
+          sub.textContent='Свежего не нашлось — показываем нашу базу';return;
         }
         const KIND={exhibition:'Выставка',performance:'Перформанс',festival:'Фестиваль',other:'Событие'};
         const CHIP={exhibition:'Выставка',performance:'Сцена',festival:'Фестиваль',other:'Другое'};
@@ -1171,7 +1171,7 @@ let focusGlobe = ()=>{};
           wrapC.appendChild(card);
         });
         wrapC.appendChild(makeSubCard(cityName)); /* карточка почты остаётся и после refresh */
-        sub.textContent=`${fresh.length} свежих от Kimi${j.cached?' · кэш':''}`;
+        sub.textContent=`${fresh.length} свежих${j.cached?' · кэш':''}`;
     };
   }
   const manual=document.getElementById('geoManual'),
