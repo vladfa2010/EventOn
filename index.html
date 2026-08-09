@@ -793,6 +793,7 @@ let focusGlobe = ()=>{};
   size();addEventListener('resize',size);
 
   wrap.addEventListener('pointerdown',e=>{
+    if(e.target.closest&&e.target.closest('#geoAsk'))return; /* клики по гео-карточке — не глобус */
     pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
     if(pointers.size===2){
       const pts=[...pointers.values()];
@@ -825,6 +826,7 @@ let focusGlobe = ()=>{};
       tip.classList.remove('show');return;
     }
     /* hover tooltip */
+    if(e.target.closest&&e.target.closest('#geoAsk')){tip.classList.remove('show');return;}
     ray.setFromCamera(mouse,camera);
     const hit=ray.intersectObjects(markers)[0];
     if(hit){
@@ -837,6 +839,7 @@ let focusGlobe = ()=>{};
     }else{tip.classList.remove('show');wrap.style.cursor='grab';}
   });
   wrap.addEventListener('pointerup',e=>{
+    if(!pointers.has(e.pointerId))return; /* pointerdown был проигнорирован (UI внутри wrap) */
     const wasMulti=pointers.size>1;
     pointers.delete(e.pointerId);
     if(pointers.size>=1){ /* pinch ended, one finger stays */
@@ -860,6 +863,7 @@ let focusGlobe = ()=>{};
   });
   wrap.addEventListener('pointerleave',()=>tip.classList.remove('show'));
   wrap.addEventListener('wheel',e=>{ /* wheel zoom (плавный) */
+    if(e.target.closest&&e.target.closest('#geoAsk'))return;
     e.preventDefault();
     zoomT=Math.max(ZMIN,Math.min(ZMAX,zoomT*(1+e.deltaY*0.0006)));
     auto=false;lastInteract=performance.now();
