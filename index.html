@@ -206,6 +206,7 @@
     display:flex;flex-direction:column;align-items:flex-start;justify-content:center;
     gap:14px;padding:24px;cursor:default;background:#151518;
     border:1px dashed #8b80f966;
+    flex-basis:clamp(150px,17vw,235px); /* ровно вдвое уже обычной карточки */
   }
   .card.ai-loading:hover{transform:none}
   .ai-pulse{
@@ -1068,6 +1069,9 @@ let focusGlobe = ()=>{};
     loader.innerHTML=`<div class="ai-pulse">ИИ</div>
       <div class="ai-loading-text">Мы ищем культурные события вокруг вас<span>Kimi изучает интернет — обычно до пары минут…</span></div>`;
     wrapC.prepend(loader);
+    /* карточка почты — второй, сразу за заглушкой «ИИ ищет» */
+    const subCardEl=wrapC.querySelector('.sub-card'); if(subCardEl)loader.after(subCardEl);
+    const subCardBack=()=>{if(subCardEl)wrapC.appendChild(subCardEl)}; /* вернуть в конец, если поиск не удался */
     const stopLoading=()=>{try{loader.remove()}catch(e){}};
     /* поиск на сервере идёт в фоне — опрашиваем каждые 10с, пока не будет готово */
     let polls=0;
@@ -1079,7 +1083,7 @@ let focusGlobe = ()=>{};
           if(!j) throw new Error('пустой ответ');
           if(j.ok&&j.pending){
             if(++polls<60)setTimeout(poll,10000); /* ждём до ~10 минут */
-            else{stopLoading();sub.textContent=`рядом: ${cityName} · Kimi думает дольше обычного — обнови страницу позже`;}
+            else{stopLoading();subCardBack();sub.textContent=`рядом: ${cityName} · Kimi думает дольше обычного — обнови страницу позже`;}
             return;
           }
           if(!j.ok) throw new Error(j.error||'ошибка поиска');
@@ -1087,6 +1091,7 @@ let focusGlobe = ()=>{};
         })
         .catch(err=>{
           stopLoading();
+          subCardBack();
           const msg=String(err&&err.message||err||'').slice(0,70);
           sub.textContent=`рядом: ${cityName} · из нашей базы · Kimi недоступен${msg?': '+msg:''}`;
         });
@@ -1096,6 +1101,7 @@ let focusGlobe = ()=>{};
         stopLoading();
         if(j.city)cityName=j.city; /* авторитетный город с сервера */
         if(!j.events||!j.events.length){
+          subCardBack();
           sub.textContent=`рядом: ${cityName} · Kimi не нашёл свежего — показываем нашу базу`;return;
         }
         const KIND={exhibition:'Выставка',performance:'Перформанс',festival:'Фестиваль',other:'Событие'};
