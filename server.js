@@ -40,7 +40,8 @@ async function chat(body) {
 async function askKimi(city, budgetMs) {
   const today = new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
   const budget = budgetMs || 300000;
-  const REQ = { max_tokens: 8192, reasoning_effort: 'low' }; /* temperature НЕ слать: k2.6/k3 требуют temperature=1 */
+  const REQ = { max_tokens: 8192, thinking: { type: 'disabled' } }; /* temperature/top_p НЕ слать: фиксированы платформой;
+    thinking off → temp 0.6 вместо 1.0 → меньше вариативность пустых ответов (по докам platform.kimi.ai) */
   const sys = [
     'Ты — городская арт-афиша. Используй веб-поиск ($web_search), чтобы найти РЕАЛЬНЫЕ художественные события:',
     'выставки, вернисажи, перформансы, арт-фестивали, — которые можно посетить СЕГОДНЯ или ЗАВТРА',
