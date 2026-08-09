@@ -257,6 +257,10 @@
     display:block;font-size:13px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
     color:#ffffffb8;margin-bottom:10px;
   }
+  .card-added{
+    display:block;margin-top:10px;font-size:11px;font-weight:600;letter-spacing:.1em;
+    text-transform:uppercase;color:#ffffff66;
+  }
   .card-title{
     font-family:'Oswald',sans-serif;font-weight:700;text-transform:uppercase;
     font-size:clamp(30px,3vw,42px);line-height:1.02;color:#fff;
@@ -453,19 +457,11 @@
   <div class="carousel" id="carouselAround"></div>
 </section>
 
-<!-- RIGHT NOW -->
-<section id="now">
-  <div class="sec-head">
-    <h2 class="sec-title">Right Now</h2>
-    <span class="sec-all">Идёт сейчас</span>
-  </div>
-  <div class="carousel" id="carouselNow"></div>
-</section>
-
-<!-- HAPPENING SOON -->
+<!-- RIGHT NOW — единая афиша: всё, что загружено на сайт -->
 <section id="events">
   <div class="sec-head">
-    <h2 class="sec-title">Happening Soon</h2>
+    <h2 class="sec-title">Right Now</h2>
+    <span class="sec-all" id="eventsSub">Идёт сейчас</span>
     <div class="car-nav">
       <button class="car-btn" id="carPrev" aria-label="Назад">←</button>
       <button class="car-btn" id="carNext" aria-label="Вперёд">→</button>
@@ -593,12 +589,23 @@ const EVENTS = [
 ];
 
 /* ================= CAROUSELS ================= */
-/* разбивка: идущие сейчас / скоро открываются */
-const NOW_IDS=['beyeler','vanherpen','mot-tokyo','ostrowski','met-odyssey','portatadino','venice-palazzo','mvrdv','stills-peace','beirut','spider-seoul','awartani-venice','london-top5','hillings-abudhabi','sa-ladakh','gugg-abudhabi-form','berlin-type','cerilli-peggy'];
+/* дата загрузки на сайт — по партиям; новый файл-дайджест = новая строка здесь */
+const ADDED_BATCH={
+  '2026-08-09':['awartani-venice','london-top5','hillings-abudhabi','sa-ladakh','gugg-abudhabi-form','berlin-type','cerilli-peggy','krasner-pollock-met','gavin-turk-soane','frieze-loos','frieze-wielebinski','crip-exhibition']
+};
+const ADDED_DEFAULT='2026-08-08'; /* стартовая подборка */
+EVENTS.forEach(e=>{
+  e.added=Object.keys(ADDED_BATCH).find(d=>ADDED_BATCH[d].includes(e.id))||ADDED_DEFAULT;
+});
+const MRU_ADD=['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
+function fmtAdded(iso){if(!iso)return'';const p=iso.split('-').map(Number);return `${p[2]} ${MRU_ADD[p[1]-1]}`}
 const ONLINE_IDS=['tv-stream','flip-flop','easel-view','libro-vasco','grammatica-aste','airless-tires','crip-exhibition'];
-const NOW=EVENTS.filter(e=>NOW_IDS.includes(e.id));
+/* единая лента Right Now: всё, что не онлайн; свежие загрузки — первыми */
+const FEED=EVENTS.filter(e=>!ONLINE_IDS.includes(e.id))
+  .sort((a,b)=>(b.added||'').localeCompare(a.added||''));
 const ONLINE=EVENTS.filter(e=>ONLINE_IDS.includes(e.id));
-const SOON=EVENTS.filter(e=>!NOW_IDS.includes(e.id)&&!ONLINE_IDS.includes(e.id));
+document.getElementById('eventsSub').textContent=
+  `Идёт сейчас · обновлено ${fmtAdded(FEED.map(e=>e.added).sort().pop())}`;
 
 function makeCard(ev){
   const el = document.createElement('article');
@@ -611,6 +618,7 @@ function makeCard(ev){
       <div>
         <span class="card-tag">${ev.tag}</span>
         <h3 class="card-title">${ev.title}</h3>
+        ${ev.added?`<span class="card-added">загружено ${fmtAdded(ev.added)}</span>`:''}
       </div>
       <span class="card-arrow"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
     </div>`;
@@ -618,10 +626,8 @@ function makeCard(ev){
   return el;
 }
 const carousel = document.getElementById('carousel');
-const carouselNow = document.getElementById('carouselNow');
 const carouselOnline = document.getElementById('carouselOnline');
-SOON.forEach(ev=>carousel.appendChild(makeCard(ev)));
-NOW.forEach(ev=>carouselNow.appendChild(makeCard(ev)));
+FEED.forEach(ev=>carousel.appendChild(makeCard(ev)));
 ONLINE.forEach(ev=>carouselOnline.appendChild(makeCard(ev)));
 
 document.getElementById('carPrev').onclick = ()=>carousel.scrollBy({left:-500,behavior:'smooth'});
@@ -645,7 +651,7 @@ function addChip(label,val,active){
       const ev=EVENTS.find(e=>e.id===card.dataset.id);
       card.style.display=(!val||ev.chip===val)?'':'none';
     });
-    ['carouselNow','carousel','carouselOnline','carouselAround'].forEach(id=>{
+    ['carousel','carouselOnline','carouselAround'].forEach(id=>{
       const c=document.getElementById(id);
       const hasVisible=[...c.children].some(k=>k.style.display!=='none');
       c.closest('section').style.display=hasVisible?'':'none';
@@ -672,7 +678,8 @@ function openEvent(id){
     <div><b>Дата</b>${ev.date}</div>
     <div><b>Место</b>${ev.city}</div>
     <div><b>Категория</b>${ev.tag}</div>
-    <div><b>Источник</b>${ev.source}</div>`;
+    <div><b>Источник</b>${ev.source}</div>
+    ${ev.added?`<div><b>Загружено</b>${fmtAdded(ev.added)}</div>`:''}`;
   document.getElementById('ovDesc').textContent=ev.desc;
   const ovLink=document.getElementById('ovLink');
   ovLink.href=ev.link;
@@ -1143,6 +1150,7 @@ let focusGlobe = ()=>{};
             badge:/завтра/i.test(x.date||'')?'ЗАВТРА':'СЕГОДНЯ',
             date:String(x.date||'СЕГОДНЯ').slice(0,26),
             lat:null,lng:null,
+            added:new Date().toISOString().slice(0,10), /* находка Kimi — датирована сегодня */
             color:['red','violet','blue','gray'][i%4],
             desc:'Свежая находка Kimi из интернета. Точное время, билеты и детали — по ссылке источника.',
             link:x.url, source:host};
