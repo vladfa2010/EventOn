@@ -1036,7 +1036,16 @@ let focusGlobe = ()=>{};
   function fillAround(la,lo,near){
     const sec=document.getElementById('around');
     const wrapC=document.getElementById('carouselAround');
-    const cityName=nearestCityName(la,lo);
+    let cityName=nearestCityName(la,lo); /* мгновенная оценка из локального списка… */
+    /* …а точный город уточняем через серверный геокодер (координаты → реальный город) */
+    fetch(`/api/geocode?lat=${la}&lng=${lo}`)
+      .then(r=>r.json()).then(g=>{
+        if(g&&g.ok&&g.city){
+          cityName=g.city;
+          const s=document.getElementById('aroundSub');
+          s.textContent=s.textContent.replace(/^рядом: [^·]+/,`рядом: ${cityName}`);
+        }
+      }).catch(()=>{});
     /* база: только ≤500 км, ближайшие первыми (near уже отсортирован) */
     const close=near.filter(x=>x.d<=500).slice(0,8);
     const renderBase=()=>{
@@ -1060,15 +1069,32 @@ let focusGlobe = ()=>{};
       <div class="ai-loading-text">Мы ищем культурные события вокруг вас<span>Kimi изучает интернет — обычно до пары минут…</span></div>`;
     wrapC.prepend(loader);
     const stopLoading=()=>{try{loader.remove()}catch(e){}};
-    fetch(`/api/around?lat=${la}&lng=${lo}&city=${encodeURIComponent(cityName)}`)
-      .then(async r=>{
-        let j=null; try{j=await r.json()}catch(e){}
-        if(!r.ok) throw new Error(j&&j.error?j.error:('HTTP '+r.status));
-        if(!j||!j.ok) throw new Error(j&&j.error?j.error:'пустой ответ');
-        return j;
-      })
-      .then(j=>{
+    /* поиск на сервере идёт в фоне — опрашиваем каждые 10с, пока не будет готово */
+    let polls=0;
+    const poll=()=>{
+      fetch(`/api/around?lat=${la}&lng=${lo}&city=${encodeURIComponent(cityName)}`)
+        .then(async r=>{
+          let j=null; try{j=await r.json()}catch(e){}
+          if(!r.ok) throw new Error(j&&j.error?j.error:('HTTP '+r.status));
+          if(!j) throw new Error('пустой ответ');
+          if(j.ok&&j.pending){
+            if(++polls<60)setTimeout(poll,10000); /* ждём до ~10 минут */
+            else{stopLoading();sub.textContent=`рядом: ${cityName} · Kimi думает дольше обычного — обнови страницу позже`;}
+            return;
+          }
+          if(!j.ok) throw new Error(j.error||'ошибка поиска');
+          onAroundResult(j);
+        })
+        .catch(err=>{
+          stopLoading();
+          const msg=String(err&&err.message||err||'').slice(0,70);
+          sub.textContent=`рядом: ${cityName} · из нашей базы · Kimi недоступен${msg?': '+msg:''}`;
+        });
+    };
+    setTimeout(poll,400);
+    const onAroundResult=(j)=>{
         stopLoading();
+        if(j.city)cityName=j.city; /* авторитетный город с сервера */
         if(!j.events||!j.events.length){
           sub.textContent=`рядом: ${cityName} · Kimi не нашёл свежего — показываем нашу базу`;return;
         }
@@ -1098,12 +1124,7 @@ let focusGlobe = ()=>{};
         });
         wrapC.appendChild(makeSubCard(cityName)); /* карточка почты остаётся и после refresh */
         sub.textContent=`рядом: ${cityName} · ${fresh.length} свежих от Kimi${j.cached?' · кэш':''}`;
-      })
-      .catch(err=>{
-        stopLoading();
-        const msg=String(err&&err.message||err||'').slice(0,70);
-        sub.textContent=`рядом: ${cityName} · из нашей базы · Kimi недоступен${msg?': '+msg:''}`;
-      });
+    };
   }
   const manual=document.getElementById('geoManual'),
         cityInp=document.getElementById('geoCity');
@@ -1146,9 +1167,19 @@ let focusGlobe = ()=>{};
   document.getElementById('geoCityGo').onclick=()=>{
     const c=cityInp.value.trim();
     if(!c)return;
-    const g=geoFromCity(c);
-    if(g){onGeo(g[0],g[1]);}
-    else note.textContent='Такого города не знаю — попробуй крупный город рядом.';
+    note.textContent='Ищем город…';
+    const fallback=()=>{ /* офлайн-режим (статика): локальный список */
+      const g=geoFromCity(c);
+      if(g){onGeo(g[0],g[1]);}
+      else note.textContent='Такого города не знаю — попробуй крупный город рядом.';
+    };
+    fetch(`/api/geocode?city=${encodeURIComponent(c)}`)
+      .then(r=>r.json())
+      .then(g=>{
+        if(g&&g.ok&&isFinite(g.lat)&&isFinite(g.lng))onGeo(g.lat,g.lng);
+        else fallback();
+      })
+      .catch(fallback);
   };
   cityInp.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('geoCityGo').click();});
 })();
