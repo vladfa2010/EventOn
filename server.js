@@ -43,10 +43,11 @@ async function askKimi(city) {
     'Ты — городская арт-афиша. Используй веб-поиск ($web_search), чтобы найти РЕАЛЬНЫЕ художественные события:',
     'выставки, вернисажи, перформансы, арт-фестивали, — которые проходят СЕГОДНЯ или ЗАВТРА',
     `в городе ${city} и его ближайших окрестностях.`,
-    'Верни СТРОГО JSON-массив без markdown и пояснений, до 8 элементов:',
+    'Верни СТРОГО JSON-массив без markdown, рассуждений, планов и html-тегов, до 8 элементов.',
     '[{"title":"...","venue":"...","date":"сегодня|завтра|точные даты","url":"https://...","kind":"exhibition|performance|festival|other"}]',
     'Правила: только события, подтверждённые найденными источниками; url — прямая ссылка на источник;',
-    'ничего не выдумывай; если уверенных находок нет — верни [].'
+    'ничего не выдумывай; если на сегодня/завтра уверенных находок нет — верни до 8 уверенных событий',
+    'ближайших 7 дней с точными датами; если и их нет — верни [].'
   ].join(' ');
   const tools = [{ type: 'builtin_function', function: { name: '$web_search' } }];
   const messages = [
@@ -71,11 +72,38 @@ async function askKimi(city) {
           messages.push({ role: 'tool', tool_call_id: tc.id, name: tc.function.name, content: tc.function.arguments });
         }
       }
-      const text = (msg && msg.content) || '';
-      const m = text.match(/\[[\s\S]*\]/);
-      if (!m) return [];
-      let arr;
-      try { arr = JSON.parse(m[0]); } catch (e) { return []; }
+      /* извлекаем JSON устойчиво: модель может обернуть ответ рассуждениями/тегами —
+         пробуем весь текст, затем все [...]-кандидаты от самых длинных */
+      const parseArr = (text) => {
+        const t = (text || '').trim();
+        const cands = [t];
+        const re = /\[[\s\S]*?\]/g; let mm;
+        while ((mm = re.exec(t))) cands.push(mm[0]);
+        cands.sort((a, b) => b.length - a.length);
+        for (const c of cands) {
+          try { const a = JSON.parse(c); if (Array.isArray(a)) return a; } catch (e) {}
+        }
+        return null;
+      };
+      let arr = parseArr(msg && msg.content);
+      if (!arr) { /* модель ушла в рассуждения вместо JSON — настойчивый переспрос с правом ещё поискать */
+        messages.push(msg, { role: 'user', content: 'Ответ не распознан. При необходимости сделай ещё один поиск, затем верни СТРОГО JSON-массив событий без рассуждений, markdown и тегов. Если уверенных событий нет — верни [].' });
+        for (let r2 = 0; r2 < 2 && !arr; r2++) {
+          const j2 = await chat(Object.assign({ model, messages, tools }, REQ));
+          const msg2 = j2.choices && j2.choices[0] && j2.choices[0].message;
+          if (!msg2) break;
+          const fr2 = j2.choices[0].finish_reason;
+          if (fr2 === 'tool_calls' && msg2.tool_calls && msg2.tool_calls.length) {
+            messages.push(msg2);
+            for (const tc of msg2.tool_calls) {
+              messages.push({ role: 'tool', tool_call_id: tc.id, name: tc.function.name, content: tc.function.arguments });
+            }
+            continue;
+          }
+          arr = parseArr(msg2.content);
+        }
+      }
+      if (!arr) return [];
       const seen = new Set();
       return arr
         .filter(x => x && x.title && /^https?:\/\//.test(x.url || ''))
@@ -112,14 +140,16 @@ http.createServer(async (req, res) => {
     if (!KEY) { res.statusCode = 500; res.end(JSON.stringify({ ok: false, error: 'MOONSHOT_API_KEY is not set' })); return; }
     const ck = city.toLowerCase() + ':' + new Date().toDateString();
     const hit = cache.get(ck);
-    if (hit && Date.now() - hit.t < CACHE_TTL) {
+    if (hit && Date.now() - hit.t < (hit.ttl || CACHE_TTL)) {
       res.end(JSON.stringify({ ok: true, city, events: hit.data, cached: true })); return;
     }
     try {
       const events = await askKimi(city);
-      cache.set(ck, { t: Date.now(), data: events });
+      /* пустой ответ кэшируем ненадолго — иначе один неудачный поиск глушит город на 12ч */
+      cache.set(ck, { t: Date.now(), data: events, ttl: events.length ? CACHE_TTL : 5 * 60 * 1000 });
       res.end(JSON.stringify({ ok: true, city, events }));
     } catch (e) {
+      console.warn('[/api/around]', city, '—', String(e.message || e)); /* видно в логах Render */
       res.statusCode = 502;
       res.end(JSON.stringify({ ok: false, error: String(e.message || e) }));
     }
