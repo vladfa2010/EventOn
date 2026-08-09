@@ -128,6 +128,14 @@
   .geo-ask-btns{display:flex;gap:8px;flex-wrap:wrap}
   .geo-ask .pill{padding:10px 18px;font-size:12px}
   .geo-ask-note{margin-top:10px;font-size:12.5px;color:var(--dim);line-height:1.4}
+  .geo-manual{display:none;margin-top:12px;gap:8px}
+  .geo-manual.show{display:flex}
+  .geo-manual input{
+    flex:1;min-width:0;background:#ffffff10;border:1px solid #ffffff22;border-radius:999px;
+    color:#fff;padding:10px 16px;font-size:13px;outline:none;
+  }
+  .geo-manual input:focus{border-color:var(--peri)}
+  .geo-manual .pill{padding:10px 16px;font-size:12px}
   @media(max-width:820px){
     .geo-ask{left:12px;right:12px;top:auto;bottom:112px;max-width:none}
     .geo-ask-text{font-size:18px}
@@ -352,6 +360,10 @@
         <button class="pill ghost" id="geoNo">Позже</button>
       </div>
       <div class="geo-ask-note" id="geoNote"></div>
+      <div class="geo-manual" id="geoManual">
+        <input id="geoCity" maxlength="60" placeholder="Или введи город вручную">
+        <button class="pill red" id="geoCityGo">Показать</button>
+      </div>
     </div>
   </div>
 </div>
@@ -629,13 +641,21 @@ let focusGlobe = ()=>{};
 (function initGlobe(){
   if(typeof THREE==='undefined'){
     document.getElementById('globeFallback').style.display='flex';
+    addUserMarker=()=>{}; focusGlobe=()=>{};
     return;
   }
   const wrap=document.getElementById('globeWrap');
   const canvas=document.getElementById('globe');
   const tip=document.getElementById('globeTip');
 
-  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+  let renderer;
+  try{ renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true}); }
+  catch(e){
+    /* WebGL недоступен: показываем фолбэк, но страница (гео, карусели) работает дальше */
+    document.getElementById('globeFallback').style.display='flex';
+    addUserMarker=()=>{}; focusGlobe=()=>{};
+    return;
+  }
   renderer.setPixelRatio(Math.min(devicePixelRatio,2));
   const scene=new THREE.Scene();
   const camera=new THREE.PerspectiveCamera(38,1,.1,100);
@@ -958,30 +978,51 @@ let focusGlobe = ()=>{};
       })
       .catch(()=>{sub.textContent=`рядом: ${cityName} · из нашей базы`;});
   }
+  const manual=document.getElementById('geoManual'),
+        cityInp=document.getElementById('geoCity');
+  function onGeo(la,lo){
+    try{localStorage.setItem('geoChoice','yes')}catch(e){}
+    if(typeof addUserMarker==='function')addUserMarker(la,lo);
+    if(typeof focusGlobe==='function')focusGlobe(la,lo);
+    const near=EVENTS.filter(e=>e.lat!=null)
+      .map(e=>({e,d:haversine(la,lo,e.lat,e.lng)}))
+      .sort((x,y)=>x.d-y.d);
+    const cnt=near.filter(x=>x.d<2000).length;
+    const cl=near[0];
+    fillAround(la,lo,near);
+    txt.innerHTML='Вы на карте ✦';
+    yes.style.display='none';no.style.display='none';manual.classList.remove('show');
+    note.textContent=(cnt
+      ?`Рядом с вами — ${cnt} событ. Ближайшее: ${cl.e.title} · ${cl.e.city} (${Math.round(cl.d)} км)`
+      :`Ближайшее событие: ${cl.e.title} · ${cl.e.city} (${Math.round(cl.d)} км)`);
+    setTimeout(()=>ask.classList.remove('show'),6000);
+  }
+  function onGeoError(err){
+    note.textContent=({
+      1:'Доступ к геолокации запрещён браузером. Разреши: значок слева от адресной строки → Разрешения → Геолокация → обнови страницу.',
+      2:'Позицию определить не удалось (нет сигнала).',
+      3:'Браузер не смог определить позицию за 12 секунд.'}[err&&err.code]
+      ||'Не получилось определить геопозицию.')+' Или укажи город:';
+    manual.classList.add('show');
+    cityInp.focus();
+  }
   yes.onclick=()=>{
-    note.textContent='Запрашиваем доступ…';
-    navigator.geolocation.getCurrentPosition(pos=>{
-      try{localStorage.setItem('geoChoice','yes')}catch(e){}
-      const la=pos.coords.latitude, lo=pos.coords.longitude;
-      addUserMarker(la,lo);
-      focusGlobe(la,lo);
-      const near=EVENTS.filter(e=>e.lat!=null)
-        .map(e=>({e,d:haversine(la,lo,e.lat,e.lng)}))
-        .sort((x,y)=>x.d-y.d);
-      const cnt=near.filter(x=>x.d<2000).length;
-      const cl=near[0];
-      fillAround(la,lo,near);
-      txt.innerHTML='Вы на карте ✦';
-      yes.style.display='none';no.style.display='none';
-      note.textContent=(cnt
-        ?`Рядом с вами — ${cnt} событ. Ближайшее: ${cl.e.title} · ${cl.e.city} (${Math.round(cl.d)} км)`
-        :`Ближайшее событие: ${cl.e.title} · ${cl.e.city} (${Math.round(cl.d)} км)`);
-      setTimeout(()=>ask.classList.remove('show'),6000);
-    },err=>{
-      note.textContent='Не получилось определить геопозицию. Может, позже?';
-      setTimeout(()=>ask.classList.remove('show'),3500);
-    },{timeout:12000,maximumAge:600000});
+    note.textContent='Запрашиваем доступ… (окно разрешения может быть у адресной строки)';
+    try{
+      navigator.geolocation.getCurrentPosition(
+        pos=>onGeo(pos.coords.latitude,pos.coords.longitude),
+        onGeoError,
+        {timeout:12000,maximumAge:600000});
+    }catch(e){onGeoError(null);}
   };
+  document.getElementById('geoCityGo').onclick=()=>{
+    const c=cityInp.value.trim();
+    if(!c)return;
+    const g=geoFromCity(c);
+    if(g){onGeo(g[0],g[1]);}
+    else note.textContent='Такого города не знаю — попробуй крупный город рядом.';
+  };
+  cityInp.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('geoCityGo').click();});
 })();
 
 /* ================= ADD EVENT FORM ================= */
