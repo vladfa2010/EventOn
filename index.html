@@ -15,6 +15,8 @@
     --red:#ff2e2e;
     --violet:#8b80f9;
     --peri:#7c8cf0;
+    --pink:#ff5e8f; /* мостик между красным и фиолетом */
+    --mint:#3fe0c0; /* холодный компаньон пери */
     --ink:#f5f5f5;
     --dim:#9a9aa0;
     --radius:26px;
@@ -201,6 +203,10 @@
   .card.gray .giant{color:#ffffff12}
   .card.blue{background:var(--peri)}
   .card.blue .giant{color:#ffffff45}
+  .card.pink{background:var(--pink)}
+  .card.pink .giant{color:#ffffff45}
+  .card.mint{background:var(--mint)}
+  .card.mint .giant{color:#ffffff4d}
   .card-date{
     position:absolute;top:22px;right:24px;z-index:2;
     font-weight:600;font-size:15px;letter-spacing:.06em;
@@ -597,6 +603,9 @@ const ADDED_DEFAULT='2026-08-08'; /* стартовая подборка */
 EVENTS.forEach(e=>{
   e.added=Object.keys(ADDED_BATCH).find(d=>ADDED_BATCH[d].includes(e.id))||ADDED_DEFAULT;
 });
+/* 6 цветов карточек — равномерно по кругу, без повторов подряд */
+const PALETTE=['red','violet','blue','pink','mint','gray'];
+EVENTS.forEach((e,i)=>{e.color=PALETTE[i%PALETTE.length];});
 const MRU_ADD=['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
 function fmtAdded(iso){if(!iso)return'';const p=iso.split('-').map(Number);return `${p[2]} ${MRU_ADD[p[1]-1]}`}
 const ONLINE_IDS=['tv-stream','flip-flop','easel-view','libro-vasco','grammatica-aste','airless-tires','crip-exhibition'];
@@ -666,9 +675,8 @@ CHIPS.forEach(c=>addChip(c,c,false));
 const ov=document.getElementById('ov'), ovClose=document.getElementById('ovClose');
 function openEvent(id){
   const ev=EVENTS.find(e=>e.id===id); if(!ev)return;
-  document.getElementById('ovLeft').className='ov-left '+({red:'',violet:'',gray:'',blue:''}[ev.color]||'');
   document.getElementById('ovLeft').style.background=
-    {red:'var(--red)',violet:'var(--violet)',gray:'var(--card)',blue:'var(--peri)'}[ev.color];
+    {red:'var(--red)',violet:'var(--violet)',gray:'var(--card)',blue:'var(--peri)',pink:'var(--pink)',mint:'var(--mint)'}[ev.color]||'var(--card)';
   document.getElementById('ovGiant').textContent=ev.title.split(' ')[0];
   document.getElementById('ovTag').textContent=ev.tag;
   document.getElementById('ovTag2').textContent=ev.tag;
@@ -802,7 +810,7 @@ let focusGlobe = ()=>{};
     g.fillStyle=gr;g.fillRect(0,0,128,128);
     return new THREE.CanvasTexture(c);
   }
-  const COLORS={red:'#ff2e2e',violet:'#8b80f9',blue:'#7c8cf0',gray:'#ffd9a0'};
+  const COLORS={red:'#ff2e2e',violet:'#8b80f9',blue:'#7c8cf0',gray:'#ffd9a0',pink:'#ff5e8f',mint:'#3fe0c0'};
   function latLng(lat,lng,r){
     const phi=(90-lat)*Math.PI/180, theta=(lng+180)*Math.PI/180;
     return new THREE.Vector3(
@@ -1151,7 +1159,7 @@ let focusGlobe = ()=>{};
             date:String(x.date||'СЕГОДНЯ').slice(0,26),
             lat:null,lng:null,
             added:new Date().toISOString().slice(0,10), /* находка Kimi — датирована сегодня */
-            color:['red','violet','blue','gray'][i%4],
+            color:PALETTE[i%PALETTE.length],
             desc:'Свежая находка Kimi из интернета. Точное время, билеты и детали — по ссылке источника.',
             link:x.url, source:host};
           EVENTS.push(ev);
@@ -1349,7 +1357,7 @@ document.getElementById('evForm').addEventListener('submit',e=>{
     tag:document.getElementById('fChip').value,
     chip:document.getElementById('fChip').value,
     city, badge:from?fmtDay(from):'СКОРО', date:fmtRange(from,to),
-    lat:geo?geo[0]:null, lng:geo?geo[1]:null, color:'blue',
+    lat:geo?geo[0]:null, lng:geo?geo[1]:null, color:PALETTE[EVENTS.length%PALETTE.length],
     desc:document.getElementById('fDesc').value.trim()||'Описание скоро появится.',
     link:document.getElementById('fLink').value.trim()||'#',
     source:'Рекомендация читателя'
