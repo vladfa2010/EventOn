@@ -1004,7 +1004,10 @@ let focusGlobe = ()=>{};
         no=document.getElementById('geoNo');
   if(!('geolocation' in navigator))return;
   try{ if(localStorage.getItem('geoChoice')==='no')return; }catch(e){}
-  setTimeout(()=>ask.classList.add('show'),1500);
+  setTimeout(()=>{ /* вдруг юзер уже дал гео за эти 1,5с — тогда не всплываем */
+    try{if(localStorage.getItem('geoChoice')==='yes')return}catch(e){}
+    ask.classList.add('show');
+  },1500);
   no.onclick=()=>ask.classList.remove('show');
   function haversine(a,b,c,d){
     const R=6371,t=Math.PI/180;
@@ -1186,10 +1189,7 @@ let focusGlobe = ()=>{};
       .map(e=>({e,d:haversine(la,lo,e.lat,e.lng)}))
       .sort((x,y)=>x.d-y.d);
     fillAround(la,lo,near);
-    txt.innerHTML='Вы на карте ✦';
-    yes.style.display='none';no.style.display='none';manual.classList.remove('show');
-    note.textContent='';
-    setTimeout(()=>ask.classList.remove('show'),900);
+    ask.classList.remove('show'); /* гео-карточку просто прячем — без баннера «Вы на карте» */
     /* скролл к «Вокруг вас» — только после того, как глобус докрутил до точки юзера и остановился */
     let scrolled=false;
     const scrollToAround=()=>{
